@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sky Commons status</title>
+    <meta name="description" content="Uptime of Tally's site, map, API and relay." />
+    <style>
+      :root {
+        --bg: #fcfcfd;
+        --fg: #1c2024;
+        --muted: #60646c;
+        --line: #d9d9e0;
+        --card: #ffffff;
+        --up: #30a46c;
+        --down: #e5484d;
+        --none: #e0e1e6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111113;
+          --fg: #edeef0;
+          --muted: #b0b4ba;
+          --line: #363a3f;
+          --card: #18191b;
+          --up: #3dd68c;
+          --down: #ff6369;
+          --none: #2e3135;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 48px 16px;
+      }
+      h1 {
+        font-size: 32px;
+        margin: 0 0 4px;
+      }
+      .lead {
+        color: var(--muted);
+        margin: 0 0 32px;
+      }
+      .service {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .name {
+        font-weight: 600;
+      }
+      .state {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .state.up {
+        color: var(--up);
+      }
+      .state.down {
+        color: var(--down);
+      }
+      .bars {
+        display: flex;
+        gap: 2px;
+        margin: 12px 0 6px;
+        height: 28px;
+      }
+      .bars span {
+        flex: 1;
+        border-radius: 2px;
+        background: var(--none);
+      }
+      .meta {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      footer {
+        margin-top: 32px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      a {
+        color: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Status</h1>
+      <p class="lead" id="lead">Checked every ten minutes from GitHub's servers.</p>
+      <div id="services"></div>
+      <footer>
+        <a href="https://tally.skycommons.org">tally.skycommons.org</a> ·
+        <a href="https://github.com/sky-commons/status">source</a>
+      </footer>
+    </main>
+    <script>
+      // The history check.py commits, read from the repository itself so it is never a deploy behind.
+      const source = "https://raw.githubusercontent.com/sky-commons/status/main/data/history.json";
+      const day = 24 * 3600;
+
+      function bar(color, title) {
+        const span = document.createElement("span");
+        span.style.background = color;
+        span.title = title;
+        return span;
+      }
+
+      function percent(checks) {
+        if (checks.length === 0) return null;
+        return (100 * checks.filter((c) => c[1] === 1).length) / checks.length;
+      }
+
+      function draw(history) {
+        const now = Date.now() / 1000;
+        const root = document.getElementById("services");
+        root.replaceChildren();
+        for (const service of Object.values(history)) {
+          const checks = service.checks;
+          const last = checks[checks.length - 1];
+          const card = document.createElement("div");
+          card.className = "service";
+          const row = document.createElement("div");
+          row.className = "row";
+          const name = document.createElement("span");
+          name.className = "name";
+          name.textContent = service.name;
+          const state = document.createElement("span");
+          state.className = "state " + (last && last[1] ? "up" : "down");
+          state.textContent = last ? (last[1] ? `Up · ${last[2]} ms` : "Down") : "No checks yet";
+          row.append(name, state);
+          const bars = document.createElement("div");
+          bars.className = "bars";
+          for (let d = 29; d >= 0; d--) {
+            const from = now - (d + 1) * day;
+            const inDay = checks.filter((c) => c[0] > from && c[0] <= from + day);
+            const up = percent(inDay);
+            const color = up == null ? "var(--none)" : up === 100 ? "var(--up)" : up >= 95 ? "#f5d90a" : "var(--down)";
+            const date = new Date((from + day) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            bars.append(bar(color, up == null ? `${date}: no data` : `${date}: ${up.toFixed(2)}% up`));
+          }
+          const meta = document.createElement("div");
+          meta.className = "meta";
+          const uptime = percent(checks);
+          meta.innerHTML = `<span>30 days ago</span><span>${uptime == null ? "" : uptime.toFixed(2) + "% up"}</span><span>Today</span>`;
+          card.append(row, bars, meta);
+          root.append(card);
+        }
+      }
+
+      fetch(source, { cache: "no-store" })
+        .then((r) => r.json())
+        .then(draw)
+        .catch(() => {
+          document.getElementById("lead").textContent = "Could not read the check history.";
+        });
+    </script>
+  </body>
+</html>

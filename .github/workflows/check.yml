@@ -1,0 +1,33 @@
+# Checks every service every ten minutes and commits the answers (check.py), which index.html draws.
+name: check
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 check.py
+      - name: commit
+        run: |
+          git config user.name "sky-commons-status"
+          git config user.email "status@skycommons.org"
+          git add data/history.json
+          git commit -m "Record checks" --quiet || exit 0
+          git pull --rebase --quiet
+          git push --quiet
