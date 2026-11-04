@@ -1,8 +1,9 @@
-# Checks every service every ten minutes and commits the answers (check.py), which index.html draws.
+# Checks every service and commits the answers (check.py), which index.html draws.
 name: check
 
 on:
   schedule:
+    # Asks for every ten minutes; GitHub's scheduler runs it every few hours.
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
