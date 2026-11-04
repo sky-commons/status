@@ -107,7 +107,7 @@
   <body>
     <main>
       <h1>Status</h1>
-      <p class="lead" id="lead">Checked every ten minutes from GitHub's servers.</p>
+      <p class="lead" id="lead">Checked every few hours from GitHub's servers.</p>
       <div id="services"></div>
       <footer>
         <a href="https://tally.skycommons.org">tally.skycommons.org</a> ·
@@ -168,9 +168,22 @@
         }
       }
 
+      // GitHub runs the ten-minute schedule hours late, so the lead says when the last check was.
+      function lead(history) {
+        const times = Object.values(history).flatMap((s) => s.checks.map((c) => c[0]));
+        if (times.length === 0) return;
+        const minutes = Math.max(0, Math.round((Date.now() / 1000 - Math.max(...times)) / 60));
+        const ago = minutes < 60 ? `${minutes} min` : `${Math.round(minutes / 60)} h`;
+        document.getElementById("lead").textContent =
+          `Checked every few hours from GitHub's servers. Last check ${ago} ago.`;
+      }
+
       fetch(source, { cache: "no-store" })
         .then((r) => r.json())
-        .then(draw)
+        .then((history) => {
+          draw(history);
+          lead(history);
+        })
         .catch(() => {
           document.getElementById("lead").textContent = "Could not read the check history.";
         });

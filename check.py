@@ -1,7 +1,8 @@
 """Checks each Sky Commons service once and appends the answers to data/history.json.
 
-Run every ten minutes by .github/workflows/check.yml. A check is up when it answers as `expect`
-says within ten seconds; history keeps 30 days of checks per service.
+Run by .github/workflows/check.yml every few hours (its cron asks for ten minutes; GitHub runs it
+late). A check is up when it answers as `expect` says within ten seconds; history keeps 30 days of
+checks per service.
 """
 
 import json
